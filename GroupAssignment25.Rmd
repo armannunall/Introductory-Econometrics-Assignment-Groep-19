@@ -1,0 +1,444 @@
+---
+title: "IEBE — Group Assignment"
+author: "Group Number: 25"
+date: "11-10-2026"
+output:
+  html_document: default
+---
+
+# Instructions
+
+Use this file for your group solutions.
+
+-   For the **tentative group submission**, complete Questions 1 and 2.
+-   After the group reshuffle, compare the earlier solutions brought by the members of your new group and agree on a common approach.
+-   For the **final group submission**, complete Questions 1-5.
+-   Your final file should contain the explanations, R code, relevant numerical results, tables, and figures needed to support your answers.
+-   Do not only paste R output. Interpret the results and answer the economic and econometric questions being asked.
+-   Use only methods and concepts covered in the course up to the corresponding question.
+
+# Creating a readable output
+
+RStudio can combine your written answers, R code, tables, and figures into a single document. To do this, click **Knit** at the top of the editor.
+
+**You are submitting this `.Rmd` file**, so your most important task is to make sure that:
+
+1.  your written answers are in this file;
+2.  your R code is in this file; and
+3.  the code runs from top to bottom without relying on objects that only exist in your R workspace.
+
+A good habit is to restart R and run the file from the beginning before submitting it.
+
+# Submission instructions
+
+When submitting your tentative group assignment in week 3, rename the group-assignment file to `GroupAssignment[GroupNumber].Rmd`. For example, group 12 should submit `GroupAssignment12.Rmd`. Please also make sure that the **group number is written inside the R Markdown file**.
+
+Use the same naming convention for the final group assignment in week 6. After the group reshuffle, your new group may have a different group number. Therefore, make sure that both the file name and the group number written inside the file correspond to your **new group**.
+
+# Getting started
+
+We start by loading the data set alongside packaged that we need.
+
+```{r setup, message=FALSE, warning=FALSE}
+library(readxl)
+library(sandwich)
+library(lmtest)
+
+CPS1985 <- read_excel("CPS1985.xlsx")
+```
+
+# Question 1
+
+## (a) (1 pt)
+
+```{r q1a}
+plot(CPS1985$education, CPS1985$wage,
+     xlab = "Years of education",
+     ylab = "Hourly wage",
+     main = "Hourly wage against years of education")
+```
+
+The graph shows that higher hourly wages are generally associated with more years of education. At low education levels, wages are generally relatively low. There are no top earners among individuals with low levels of education. The increase in wage assocaiated with an increase in years of education is clear and could reasonably be modeled by a straight line up to around 12 years of education. 
+
+After that point, there is substantial variation in wages, as individuals with higher levels of education include both relatively high and relatively low earners, which is less consistent with a simple linear relationship. Despite this variation, the overall pattern seems to be approximately linear and upward-sloping.
+
+## (b) (1 pt)
+
+```{r q1b}
+model <- lm(wage ~ education, data = CPS1985)
+summary(model)
+
+beta1 <- cov(CPS1985$education, CPS1985$wage) / var(CPS1985$education)
+
+cat("Slope calculated from cov()/var():", beta1, "\n")
+cat("Slope estimated by lm():", coef(model)["education"], "\n")
+```
+
+Regression Results:
+
+Using `lm()`, the estimated simple linear regression model is \[\widehat{wage}_i = -0.4766 + 0.7265\,education_i.\]
+
+The estimated coefficient on education is 0.7265. This means that one additional year of education is associated with an increase of approximately \$0.73 in hourly wage, on average.
+
+The estimated intercept is -0.4766. This means that the predicted hourly wage for an individual with zero years of education is approximately -\$0.48\. However, this interpretation is not economically meaningful because a negative hourly wage is not realistic, and zero years of education is not a relevant value for the working population in this context. The intercept is mainly useful as part of the regression line.
+
+Manual Verification of the Slope:
+
+Using the sample covariance between education and wage and the sample variance of education, the manually calculated slope coefficient is 0.7265. This matches the slope estimate from lm() up to numerical rounding. Therefore, the manual calculation confirms the OLS estimate of the education coefficient.
+
+## (c) (1 pt)
+
+```{r q1c}
+fit_stats <- c(R_squared = summary(model)$r.squared, SER = summary(model)$sigma, SD_wage = sd(CPS1985$wage))
+round(fit_stats, 4)
+```
+
+The regression produced an R^2 of 0.1255 and a standard error of the regression (SER) of 4.6820. The R^2 measures the fraction of the sample variance of wage that is explained by education. An R^2 of 0.1255 means that education explains 12.55% of the variation in hourly wages, while the remaining 87.4% is not explained by education and may reflect other factors, such as work experience or sex.
+
+The SER estimates the spread of the distribution of the error term and measures the typical size of the OLS regression residuals, in the units of the dependent variable (dollars per hour). An SER of 4.6820 means that actual hourly wages typically deviate from the regression line by about \$4.68. Because the SER almost corresponds to the sample standard deviation of the OLS residuals, it can be compared directly with the standard deviation of wage, which is about \$4.99. An SER of \$4.68 is only slightly smaller than the overall sample standard deviation of wage, indicating that education alone doesn't predict individual wages very precisely.
+
+A relatively low R^2 does not by itself imply that the estimated relationship between education and wages is uninteresting. R^2 is a measure of fit, it captures how much of the total variation in wage the regressors explain, but it says nothing about whether the estimated coefficient on education is economically meaningful or statistically significant. Wages are determined by many factors besides years of schooling, so it is expected that education alone leaves most of the variation in wages unexplained.
+
+## (d) (1 pt)
+
+```{r q1d}
+new_educ <- data.frame(education = c(12, 20, 30))
+
+predicted_wages <- round(predict(model, newdata = new_educ), 2)
+names(predicted_wages) <- c("12 years", "20 years", "30 years")
+
+predicted_wages
+
+education_range <- c(Minimum = min(CPS1985$education), Maximum = max(CPS1985$education))
+education_range
+```
+Using the fitted regression the predicted hourly wages are around \$8.24 for 12 years of education, \$14.05 for 20 years and $21.32 for 30 years. The observed range of education is 3 to 18 years. Since 12 years of education falls within the observed range, the prediction is an interpolation and is therefore reasonably supported by the data. However 20 and 30 years of education lie outside the observed range, so predicting wages for these values requires extrapolation. This means the linear relationship estimated within the observed range is simply assumed to continue outside it, which may not hold. 
+
+Not every prediction R calculates is automatically meaningful. R will compute a fitted value for any input you give it, but that doesn't mean the prediction is realistic. For education = 30 especially, we are relying on the assumption that the same linear relationship between education and wage continues far beyond the data we actually observed. If we extrapolate too far this could produce wage predictions that are unrealistically high.
+
+# Question 2
+
+## (a) (1 pt)
+
+```{r q2a}
+summary(CPS1985$wage)
+summary(CPS1985$education)
+```
+
+We consider the simple regression model:
+
+\[
+wage_i = \beta_0 + \beta_1 education_i + u_i
+\]
+
+where wage_i is hourly wage, education_i is years of education, and u_i contains other factors that affect wages but are not included in the regression. The three least-squares assumptions discussed in the lecture are conditional exogeneity, i.i.d. observations, and the absence of large outliers.
+
+1. Conditional exogeneity
+The first assumption is:
+
+\[
+E(u_i \mid education_i = x) = 0.
+\]
+
+This means that factors contained in u_i should not be systematically related to education. This assumption is questionable in this application. There are many other factors that affect hourly wages, such as experience, occupation, gender, union membership, sector, and ethnicity. Some of these factors may also be related to education. For example, individuals with more education may be more likely to work in certain occupations, while occupation can also affect wages. If these factors are omitted from the regression and are correlated with education, they are included in the error term and the conditional exogeneity assumption may be violated. This assumption cannot be directly verified from the observed wage and education data, so economic reasoning about potential omitted factors is important.
+
+2. i.i.d. observations
+The second assumption is that 
+\[
+(X_i,Y_i), \qquad i=1,\ldots,n,
+\]
+are independently and identically distributed. This means that the observations come from the same population and are independently sampled. According to the lecture, this assumption is satisfied when the data are collected using simple random sampling. This assumption appears reasonably plausible in this application because the assignment states that the 181 observations are a random subsample of the CPS1985 dataset. Therefore, the way the data were selected supports the assumption that the observations are independently and identically distributed. However, this cannot be confirmed solely from the observed values, we rely on the description of how the data were collected.
+
+3. Large outliers in X and/or Y are rare
+The third assumption is that large outliers in the explanatory variable or dependent variable are rare. Here, this means that there should not be extremely unusual values of education or wage that could have a large influence on the estimated regression coefficients.
+
+The observed data provide some evidence for assessing this assumption. Education ranges from 3 to 18 years, with a median of 12 years and a mean of 13.39 years. The maximum of 18 years is relatively high but is still a plausible level of education and doesn't appear to be an obvious extreme observation. Hourly wage ranges from 1 to 25, with a median of 8.50 and a mean of 9.253. The maximum wage of 25 is relatively high compared with the median, but it is still a plausible wage and is not by itself evidence of an extreme or erroneous observation. Therefore, the summary statistics do not indicate any obviously extreme or implausible observations, so the assumption that large outliers are rare appears reasonably plausible.
+
+Overall, the i.i.d. assumption and the assumption that large outliers are rare appear reasonably plausible in this application. Conditional exogeneity is more questionable because there are several other factors that affect wages and may also be related to education.
+
+## (b) (1 pt)
+
+```{r q2b}
+residuals_model <- residuals(model)
+
+plot(CPS1985$education, residuals_model,
+     xlab = "Years of education",
+     ylab = "OLS residuals",
+     main = "Residuals against years of education")
+```
+
+The plot of residuals against years of education shows that the spread of the residuals is not constant across values of education. At low levels of education, up to 12, the residuals are tightly clustered around to zero, ranging from about −5 to 5. From around 12 years of education onward, the residuals are far more dispersed, ranging from roughly −7 to 15, with both very large positive and large negative residuals occurring at the same education levels.
+
+Since the residuals show a spread that changes with education rather than remaining constant, this suggests that the conditional variance of the errors given education is not constant across values of education, it is heteroskedastic rather than homoskedastic. If it were instead homoskedastic, we would expect to see the residuals scatter within a roughly constant width band around zero across the entire range of education, with no systematic widening or narrowing as education increases.
+
+Heteroskedasticity does not mean that OLS can no longer be used to estimate the regression coefficients, and it does not necessarily make \(\hat{\beta}_1\) biased. As long as the zero conditional mean assumption, \[E(u_i \mid X_i)=0,\] still holds, the OLS estimator remains unbiased. However, heteroskedasticity means that the conditional variance of the error term, \[\operatorname{Var}(u_i \mid X_i),\] is not constant across observations. Since the usual OLS standard-error formula assumes constant error variance, it is no longer appropriate when heteroskedasticity is present. As a result, the standard errors may be incorrect, which can make the corresponding t-statistics, p-values, and confidence intervals unreliable.
+
+Therefore, heteroskedasticity-robust standard errors should be used. These do not change the estimated OLS coefficients. Instead, they adjust the estimated standard errors to account for the fact that the variance of the error term is not constant across observations. As a result, the corresponding t-statistics, p-values, and confidence intervals are more reliable for statistical inference when heteroskedasticity is present.
+
+## (c) (1 pt)
+
+```{r q2c}
+beta1 <- 0.7265
+se_beta1 <- 0.15413
+df <- 179
+t_critical <- qt(0.975, df)
+lower <- beta1 - t_critical * se_beta1
+upper <- beta1 + t_critical * se_beta1
+c(lower, upper)
+
+library(sandwich)
+library(lmtest)
+coeftest(model, vcov = vcovHC(model, type = "HC1"))
+```
+
+The estimated slope is \(\hat{\omega}_1 = 0.7265\), with a default standard error of 0.1433 and a heteroskedasticity-robust (HC1) standard error of 0.15413. There are 179 degrees of freedom.
+
+A 95% confidence interval using the robust standard error is constructed as
+
+\[
+\hat{\omega}_1 \pm t_{0.975,179}SE_{\text{robust}}(\hat{\omega}_1).
+\]
+
+Using \(t_{0.975,179}\approx1.973\),
+
+\[
+0.7265 \pm 1.973(0.15413),
+\]
+
+which gives
+
+\[
+\boxed{[0.4225,\ 1.0306]}.
+\]
+
+Since zero is not contained in this interval, we reject \(H_0:\omega_1=0\) at the 5% significance level. Equivalently, the robust test statistic is
+
+\[
+t=\frac{0.7265}{0.15413}=4.7139,
+\]
+
+with a p-value of \(4.869\times10^{-6}\), which is below 0.05.
+
+Using heteroskedasticity-robust standard errors increases the standard error from 0.1433 to 0.15413, while the estimated slope remains 0.7265. The robust confidence interval is therefore wider than the default confidence interval, which is approximately [0.4437; 1.0093]. However, the inferential conclusion does not change, as zero is still not contained in the confidence interval and we reject \(H_0:\omega_1=0\) at the 5% significance level. We would prefer to report the heteroskedasticity-robust standard error because the variance of hourly wages may differ across education levels. The robust standard error allows for heteroskedasticity and therefore provides inference without relying on the assumption of constant error variance.
+
+
+## (d) (1 pt)
+
+```{r q2d}
+coef(model)["education"]
+```
+
+No, this conclusion is not justified by the simple regression. A simple OLS regression only tells us about the relationship between education and wage in our sample, it cannot on its own establish causality.
+
+Whether \(\hat{\beta}_1\) can be given a causal interpretation depends on the conditional mean-zero assumption: \[E(u_i \mid education_i = x) = 0.\]
+
+This means that at any fixed level of education, everything else that affects wages (the term u) should average out to zero. Basically, these other factors should not be related to education. If this assumption
+holds, we can say that higher education causes the wage difference we see. If it does not hold, part of that wage difference may be caused by other factors tied to education, rather than education itself.
+
+In our regression, this assumption is unlikely to hold because education was not randomly assigned. People choose how much education to get, and
+that choice is related to other characteristics that also affect wages. This means there are likely omitted variables in the term u that are correlated with education, which would make \(E(u_i \mid education_i = x) = 0.\) fail.
+
+Two examples of such omitted variables:
+
+1. Ability: people with higher ability may be both more likely to pursue additional education and more productive (thus better paid) at work, independent of the education itself. If ability isn't in the regression, it sits inside u and is correlated with education.
+2. Family background: people from wealthier or more educated families may have both easier access to more schooling and better job connections or opportunities that raise wages on their own, separate from what the schooling actually teaches them.
+
+So because these (and other) factors are omitted and correlated with education, \(\hat{\beta}_1\) likely reflects a mix of the true effect of education plus the influence of these omitted factors. This means the estimate is better interpreted as an association, not proof of causation.
+
+# Question 3
+
+## (a) (2 pt)
+
+```{r q3a}
+model_exp <- lm(wage ~ education + experience, data = CPS1985)
+
+coeftest(model_exp, vcov = vcovHC(model_exp, type = "HC1"))
+
+education_comparison <- c("Simple linear regression" = unname(coef(model)["education"]), "Multiple linear regression" = unname(coef(model_exp)["education"]))
+round(education_comparison, 4)
+
+change_education <- unname(coef(model_exp)["education"] - coef(model)["education"])
+cat("Change in education coefficient:", round(change_education, 4))
+
+```
+The estimated coefficient on education in the simple regression from Question 1 was 0.7265. After adding experience to the model, the estimated education coefficient increases to 0.9311. The change is 0.2046, which is a noticeable increase. Holding experience constant, 1 additional year of education is associated with about $0.93 higher hourly wage. The coefficient remains statistically significant using HC1 robust standard errors.
+
+This change can be explained by omitted variable bias in the simple regression. For it to occur, 2 conditions must hold: experience must affect wage, and experience must be correlated with education. Both conditions are plausible. Experience has a positive and statistically significant coefficient of 0.1138, which suggests that more experience is associated with higher wages. 
+
+At the same time, experience is negatively correlated with education. People who study longer usually enter the labour market later and therefore have less work experience. When experience is left out of simple regression, the lower work experience of more educated people also lowers their wages, making the education coefficient be smaller. Once experience is included in the regression, we compare people with the same level of experience, and the education coefficient increases.
+
+Therefore, both conditions for omitted variable bias are satisfied. Omitting experience explains why the education coefficient is lower in the simple regression and increases once experience is included.
+
+## (b) (2 pt)
+
+```{r q3b}
+fit_stats <- rbind("Simple linear regression" = c(R_squared = summary(model)$r.squared, Adjusted_R_squared = summary(model)$adj.r.squared, SER = summary(model)$sigma), "Multiple linear regression" = c(R_squared = summary(model_exp)$r.squared, Adjusted_R_squared = summary(model_exp)$adj.r.squared, SER = summary(model_exp)$sigma))
+
+round(fit_stats, 4)
+```
+
+The multiple linear regression fits the observed wage data better than the simple regression. Its R^2 increases from 0.1255 to 0.1868 and its adjusted R^2 increases from 0.1207 to 0.1777, meaning that the model with experience explains more of the variation in wages. The SER also decreases from 4.6820 to 4.5276, meaning that prediction errors are slightly smaller.
+
+However, better in-sample fit does not mean the model has a better causal interpretation. To prove causality, we would need to show that the main assumptions for a causal interpretation hold. After controlling for experience, there should be no important omitted factors that both affect wages and are related to education. Otherwise, the estimated education coefficient can still capture the effect of those omitted factors, rather than only the effect of education.
+
+Since other important factors may still be omitted from the model, a higher R^2 or lower SER alone is not enough to show causality.
+
+## (c) (2 pt)
+
+```{r q3c}
+CPS1985$female_yes <- ifelse(CPS1985$female == "yes", 1, 0)
+CPS1985$female_no  <- ifelse(CPS1985$female == "no", 1, 0)
+
+table(CPS1985$female, CPS1985$female_yes)
+
+# every person is in exactly one of the two categories
+all(CPS1985$female_yes + CPS1985$female_no == 1)
+
+model_both <- lm(wage ~ education + experience + female_yes + female_no, data = CPS1985)
+summary(model_both)
+```
+
+R estimates the model, but the coefficient on `female_no` is reported as `NA`, with the message "1 not defined because of singularities". R has dropped `female_no` from the regression and only estimated the intercept and the coefficients on education, experience and `female_yes`.
+
+This is what we would expect. Every person in the data is either female or not female, so for every observation
+
+\[
+female\_yes_i + female\_no_i = 1.
+\]
+
+The regression also contains an intercept, which is a regressor that is equal to 1 for every observation. So `female_no` is an exact linear function of the intercept and `female_yes`: \(female\_no_i = 1 - female\_yes_i\). This is perfect multicollinearity, and it is known as the dummy variable trap.
+
+With perfect multicollinearity OLS has no unique solution. The model cannot tell apart the effect of `female_no` from the effect of the intercept and `female_yes`: we could increase \(\beta_0\) by any number and decrease \(\beta_3\) and \(\beta_4\) by the same number, and the fitted values would be exactly the same. The coefficient on `female_no` therefore has no meaning, so R drops one of the perfectly collinear regressors. This is not a problem with the data but with how we specified the model.
+
+## (d) (2 pt)
+
+```{r q3d}
+model_fem <- lm(wage ~ education + experience + female_yes, data = CPS1985)
+coeftest(model_fem, vcov = vcovHC(model_fem, type = "HC1"))
+
+# check: letting R create the dummy itself gives exactly the same estimates
+model_fem_factor <- lm(wage ~ education + experience + female, data = CPS1985)
+coef(model_fem_factor)
+
+b_fem <- unname(coef(model_fem)["female_yes"])
+se_fem <- sqrt(vcovHC(model_fem, type = "HC1")["female_yes", "female_yes"])
+b_fem + c(-1, 1) * qt(0.975, df = model_fem$df.residual) * se_fem
+```
+
+To solve the dummy variable trap we keep the intercept and include only one of the two dummies. We drop `female_no` and estimate
+
+\[
+wage_i = \beta_0 + \beta_1 education_i + \beta_2 experience_i + \beta_3 female\_yes_i + u_i .
+\]
+
+The category whose dummy is left out is the reference group. Here that is men (`female = no`). For men \(female\_yes_i = 0\), so their regression line is \(\beta_0 + \beta_1 education_i + \beta_2 experience_i\). For women it is \((\beta_0 + \beta_3) + \beta_1 education_i + \beta_2 experience_i\). The two lines have the same slopes and differ only in the intercept, by \(\beta_3\). If we let R make the dummy itself with `female`, R also uses `no` as the reference category (it comes first alphabetically) and we get exactly the same estimates.
+
+The estimated coefficient on `female_yes` is `r round(b_fem, 4)`. This means that, for a man and a woman with the same years of education and the same years of experience, the woman's hourly wage is on average about \$`r round(abs(b_fem), 2)` `r ifelse(b_fem < 0, "lower", "higher")` than the man's. With the HC1 robust standard error of `r round(se_fem, 4)` the t-statistic is `r round(b_fem / se_fem, 2)`, so the coefficient is `r ifelse(abs(b_fem / se_fem) > qt(0.975, model_fem$df.residual), "statistically significant", "not statistically significant")` at the 5% level.
+
+This is a conditional difference in average wages between women and men, not proof that being female causes a lower wage. Other factors that differ between men and women and affect wages, such as occupation, sector or hours worked, are still in the error term.
+
+------------------------------------------------------------------------
+
+# Question 4
+
+**Material needed:** Weeks 2-5.
+
+## (a) (2 pt)
+
+```{r q4a}
+# averages of education and wage by the candidate extra controls
+aggregate(cbind(education, wage) ~ region, data = CPS1985, mean)
+aggregate(cbind(education, wage) ~ ethnicity, data = CPS1985, mean)
+aggregate(cbind(education, wage) ~ union, data = CPS1985, mean)
+
+# age cannot be added next to education and experience:
+# experience = age - education - 6, so this is perfect multicollinearity again
+coef(lm(wage ~ education + experience + age, data = CPS1985))
+
+base_model <- lm(wage ~ education + experience + female + union + region + ethnicity,
+                 data = CPS1985)
+```
+
+Our base model is
+
+\[
+wage_i = \beta_0 + \beta_1 education_i + \beta_2 experience_i + \beta_3 female_i + \beta_4 union_i + \beta_5 region_i + \beta_6 ethnicity_i + u_i ,
+\]
+
+where `female`, `union`, `region` and `ethnicity` enter as dummy variables (one category of each is the reference group, as in 3(d)). We add a control when it plausibly affects wages and is also related to education, because then leaving it out causes omitted variable bias in the education coefficient (the two conditions from 3(a)).
+
+- **experience**: more experience raises productivity and therefore wages. It is also negatively related to education, because people who study longer start working later. In 3(a) leaving it out biased the education coefficient downwards.
+- **female**: in 1985 women earned less than men, also at the same education and experience (3(d)). Women and men can also differ in education and in experience, for example because of career breaks. So `female` controls for gender differences in wages, including things like discrimination and differences in career patterns.
+- **union**: union jobs pay a wage premium because unions bargain for higher wages. Union membership is also related to education, since unions are more common in manual jobs held by workers with less education. Leaving `union` out would mix the union premium into the education coefficient.
+- **region** (extra control): wages and price levels were lower in the South than in the rest of the US, and average education was also lower there (see the table above). So region controls for local labour market conditions and cost of living that affect wages and are related to education.
+- **ethnicity** (extra control): the table above shows that average education and average wage both differ by ethnicity: Hispanic workers have on average about 12.6 years of education and earn \$8.27, against 13.4 years and \$9.27 for Caucasian workers. It controls for ethnic differences in wages, for example from discrimination or language skills, that would otherwise end up in the error term.
+
+We deliberately leave some variables out:
+
+- **age**: experience is defined as age − education − 6, so age is an exact linear function of education and experience. Adding it gives perfect multicollinearity, just like `female_no` in 3(c); R returns `NA` for age in the regression above.
+- **occupation** and **sector**: these are partly a result of education. Education helps people get into management or technical jobs, and that is one of the ways education raises wages. If we control for occupation we compare people within the same occupation and remove that part of the education effect, so the education coefficient would become too small. These are "bad controls" for the question we ask, but they are useful as a sensitivity check in 4(b).
+- **married**: it is not clear whether marriage affects wages or wages affect marriage, and it is not obviously related to education, so we do not include it in the base model.
+
+An important determinant of wages that is not observed in the dataset is **ability** (for example cognitive ability or motivation). More able people tend to get more education and would also earn more anyway, so it is likely still in the error term and correlated with education. Other unobserved factors are family background (parents' education and income), the quality of the school or university, and tenure with the current employer. Because these are not in the data, even our base model probably does not give a causal effect of education.
+
+## (b) (2 pt)
+
+Write your group answer here.
+
+```{r q4b}
+# R code for Question 4(b)
+```
+
+## (c) (2 pt)
+
+Write your group answer here.
+
+```{r q4c}
+# R code for Question 4(c)
+```
+
+## (d) (2 pt)
+
+Write your group answer here.
+
+```{r q4d}
+# R code for Question 4(d)
+```
+
+------------------------------------------------------------------------
+
+# Question 5
+
+**Material needed:** Weeks 2-6.
+
+## (a) (2 pt)
+
+Write your group answer here.
+
+```{r q5a}
+# R code for Question 5(a)
+```
+
+## (b) (2 pt)
+
+Write your group answer here.
+
+```{r q5b}
+# R code for Question 5(b)
+```
+
+## (c) (2 pt)
+
+Write your group answer here.
+
+```{r q5c}
+# R code for Question 5(c)
+```
+
+## (d) (2 pt)
+
+Write your group answer here.
+
+```{r q5d}
+# R code for Question 5(d)
+```
