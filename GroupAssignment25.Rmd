@@ -349,7 +349,9 @@ This is a conditional difference in average wages between women and men, not pro
 # averages of education and wage by the candidate extra controls
 aggregate(cbind(education, wage) ~ region, data = CPS1985, mean)
 aggregate(cbind(education, wage) ~ ethnicity, data = CPS1985, mean)
+table(CPS1985$ethnicity)
 aggregate(cbind(education, wage) ~ union, data = CPS1985, mean)
+aggregate(cbind(education, experience, wage) ~ female, data = CPS1985, mean)
 
 # age cannot be added next to education and experience:
 # experience = age - education - 6, so this is perfect multicollinearity again
@@ -368,10 +370,10 @@ wage_i = \beta_0 + \beta_1 education_i + \beta_2 experience_i + \beta_3 female_i
 where `female`, `union`, `region` and `ethnicity` enter as dummy variables (one category of each is the reference group, as in 3(d)). We add a control when it plausibly affects wages and is also related to education, because then leaving it out causes omitted variable bias in the education coefficient (the two conditions from 3(a)).
 
 - **experience**: more experience raises productivity and therefore wages. It is also negatively related to education, because people who study longer start working later. In 3(a) leaving it out biased the education coefficient downwards.
-- **female**: in 1985 women earned less than men, also at the same education and experience (3(d)). Women and men can also differ in education and in experience, for example because of career breaks. So `female` controls for gender differences in wages, including things like discrimination and differences in career patterns.
-- **union**: union jobs pay a wage premium because unions bargain for higher wages. Union membership is also related to education, since unions are more common in manual jobs held by workers with less education. Leaving `union` out would mix the union premium into the education coefficient.
+- **female**: women earned less than men, also at the same education and experience: in 3(d) the gap was about \$3.24 per hour. In our sample women and men have similar education (13.2 and 13.5 years), but women have more potential experience (19.7 against 15.7 years). Because potential experience is age − education − 6, it does not subtract time out of the labour force, such as career breaks for children. For women it probably overstates actual experience. Including `female` controls for gender differences in wages, including discrimination and differences in career patterns, so that these are not picked up by education or experience.
+- **union**: union jobs pay a wage premium because unions bargain for higher wages. In our sample union members earn about \$12.35 per hour against \$8.66 for non-members. Union members have slightly more education than non-members (13.7 against 13.3 years), so the link with education is weak here and leaving `union` out would cause only a small bias in the education coefficient. We still include it because it is an important determinant of wages and because it lowers the error variance.
 - **region** (extra control): wages and price levels were lower in the South than in the rest of the US, and average education was also lower there (see the table above). So region controls for local labour market conditions and cost of living that affect wages and are related to education.
-- **ethnicity** (extra control): the table above shows that average education and average wage both differ by ethnicity: Hispanic workers have on average about 12.6 years of education and earn \$8.27, against 13.4 years and \$9.27 for Caucasian workers. It controls for ethnic differences in wages, for example from discrimination or language skills, that would otherwise end up in the error term.
+- **ethnicity** (extra control): the table above shows that average education and average wage both differ by ethnicity: Hispanic workers have on average about 12.6 years of education and earn \$8.27, against 13.4 years and \$9.27 for Caucasian workers. It controls for ethnic differences in wages, for example from discrimination or language skills, that would otherwise end up in the error term. Note that there are only 10 Hispanic workers in the sample, so the coefficient for this group will be estimated imprecisely.
 
 We deliberately leave some variables out:
 
