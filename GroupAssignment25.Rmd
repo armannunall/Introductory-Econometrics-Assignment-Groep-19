@@ -1,9 +1,10 @@
 ---
 title: "IEBE — Group Assignment"
-author: "Group Number: 25"
+author: 'Group Number: 25'
 date: "11-10-2026"
 output:
   html_document: default
+  pdf_document: default
 ---
 
 # Instructions
@@ -58,7 +59,7 @@ plot(CPS1985$education, CPS1985$wage,
      main = "Hourly wage against years of education")
 ```
 
-The graph shows that higher hourly wages are generally associated with more years of education. At low education levels, wages are generally relatively low. There are no top earners among individuals with low levels of education. The increase in wage assocaiated with an increase in years of education is clear and could reasonably be modeled by a straight line up to around 12 years of education. 
+The graph shows that higher hourly wages are generally associated with more years of education. At low education levels, wages are generally relatively low. There are no top earners among individuals with low levels of education. The increase in wage associated with an increase in years of education is clear and could reasonably be modeled by a straight line up to around 12 years of education. 
 
 After that point, there is substantial variation in wages, as individuals with higher levels of education include both relatively high and relatively low earners, which is less consistent with a simple linear relationship. Despite this variation, the overall pattern seems to be approximately linear and upward-sloping.
 
@@ -167,7 +168,7 @@ plot(CPS1985$education, residuals_model,
      main = "Residuals against years of education")
 ```
 
-The plot of residuals against years of education shows that the spread of the residuals is not constant across values of education. At low levels of education, up to 12, the residuals are tightly clustered around to zero, ranging from about −5 to 5. From around 12 years of education onward, the residuals are far more dispersed, ranging from roughly −7 to 15, with both very large positive and large negative residuals occurring at the same education levels.
+The plot of residuals against years of education shows that the spread of the residuals is not constant across values of education. At low levels of education, below 12 years, the residuals are tightly clustered around zero, ranging from about −4 to 5. From 12 years of education onward, the residuals are far more dispersed, ranging from roughly −7 to 15, with both very large positive and large negative residuals occurring at the same education levels.
 
 Since the residuals show a spread that changes with education rather than remaining constant, this suggests that the conditional variance of the errors given education is not constant across values of education, it is heteroskedastic rather than homoskedastic. If it were instead homoskedastic, we would expect to see the residuals scatter within a roughly constant width band around zero across the entire range of education, with no systematic widening or narrowing as education increases.
 
@@ -178,25 +179,27 @@ Therefore, heteroskedasticity-robust standard errors should be used. These do no
 ## (c) (1 pt)
 
 ```{r q2c}
-beta1 <- 0.7265
-se_beta1 <- 0.15413
-df <- 179
+beta1 <- unname(coef(model)["education"])
+se_beta1 <- sqrt(vcovHC(model, type = "HC1")["education", "education"])
+df <- model$df.residual
 t_critical <- qt(0.975, df)
 lower <- beta1 - t_critical * se_beta1
 upper <- beta1 + t_critical * se_beta1
 c(lower, upper)
 
-library(sandwich)
-library(lmtest)
+# robust (HC1) t-test
 coeftest(model, vcov = vcovHC(model, type = "HC1"))
+
+# default lm() output for comparison
+confint(model)["education", ]
 ```
 
-The estimated slope is \(\hat{\omega}_1 = 0.7265\), with a default standard error of 0.1433 and a heteroskedasticity-robust (HC1) standard error of 0.15413. There are 179 degrees of freedom.
+The estimated slope is \(\hat{\beta}_1 = 0.7265\), with a default standard error of 0.1433 and a heteroskedasticity-robust (HC1) standard error of 0.15413. There are 179 degrees of freedom.
 
 A 95% confidence interval using the robust standard error is constructed as
 
 \[
-\hat{\omega}_1 \pm t_{0.975,179}SE_{\text{robust}}(\hat{\omega}_1).
+\hat{\beta}_1 \pm t_{0.975,179}SE_{\text{robust}}(\hat{\beta}_1).
 \]
 
 Using \(t_{0.975,179}\approx1.973\),
@@ -211,7 +214,7 @@ which gives
 \boxed{[0.4225,\ 1.0306]}.
 \]
 
-Since zero is not contained in this interval, we reject \(H_0:\omega_1=0\) at the 5% significance level. Equivalently, the robust test statistic is
+Since zero is not contained in this interval, we reject \(H_0:\beta_1=0\) at the 5% significance level. Equivalently, the robust test statistic is
 
 \[
 t=\frac{0.7265}{0.15413}=4.7139,
@@ -219,7 +222,7 @@ t=\frac{0.7265}{0.15413}=4.7139,
 
 with a p-value of \(4.869\times10^{-6}\), which is below 0.05.
 
-Using heteroskedasticity-robust standard errors increases the standard error from 0.1433 to 0.15413, while the estimated slope remains 0.7265. The robust confidence interval is therefore wider than the default confidence interval, which is approximately [0.4437; 1.0093]. However, the inferential conclusion does not change, as zero is still not contained in the confidence interval and we reject \(H_0:\omega_1=0\) at the 5% significance level. We would prefer to report the heteroskedasticity-robust standard error because the variance of hourly wages may differ across education levels. The robust standard error allows for heteroskedasticity and therefore provides inference without relying on the assumption of constant error variance.
+Using heteroskedasticity-robust standard errors increases the standard error from 0.1433 to 0.15413, while the estimated slope remains 0.7265. The robust confidence interval is therefore wider than the default confidence interval, which is approximately [0.4437; 1.0093]. However, the inferential conclusion does not change, as zero is still not contained in the confidence interval and we reject \(H_0:\beta_1=0\) at the 5% significance level. We would prefer to report the heteroskedasticity-robust standard error because the variance of hourly wages may differ across education levels. The robust standard error allows for heteroskedasticity and therefore provides inference without relying on the assumption of constant error variance.
 
 
 ## (d) (1 pt)
@@ -285,6 +288,7 @@ Since other important factors may still be omitted from the model, a higher R^2 
 
 ## (c) (2 pt)
 
+
 ```{r q3c}
 CPS1985$female_yes <- ifelse(CPS1985$female == "yes", 1, 0)
 CPS1985$female_no  <- ifelse(CPS1985$female == "no", 1, 0)
@@ -298,15 +302,11 @@ model_both <- lm(wage ~ education + experience + female_yes + female_no, data = 
 summary(model_both)
 ```
 
-R estimates the model, but the coefficient on `female_no` is `NA` ("1 not defined because of singularities"), so R drops `female_no`.
+R estimates the model but gives female_no = NA, as expected. Every person is either female or not, so female_yes + female_no = 1 in every row. The intercept is also 1 in every row, so female_no is an exact copy of "intercept minus female_yes". That is perfect multicollinearity (the dummy variable trap), so OLS can't pin down that coefficient and R drops it. The other estimates are unaffected.
 
-This is what we expect. Every person is either female or not, so for every observation
-
-$$female\_yes_i + female\_no_i = 1 .$$
-
-The intercept is also a regressor equal to 1 for everyone, so $female\_no_i = 1 - female\_yes_i$ is an exact linear function of the other regressors. This is perfect multicollinearity (the dummy variable trap). OLS cannot separate the effect of `female_no` from the intercept and `female_yes`, so its coefficient cannot be estimated.
 
 ## (d) (2 pt)
+
 
 ```{r q3d}
 model_fem <- lm(wage ~ education + experience + female_yes, data = CPS1985)
@@ -321,15 +321,15 @@ se_fem <- sqrt(vcovHC(model_fem, type = "HC1")["female_yes", "female_yes"])
 b_fem + c(-1, 1) * qt(0.975, df = model_fem$df.residual) * se_fem
 ```
 
-We keep the intercept and include only one dummy, `female_yes`:
+To solve the dummy variable trap we keep the intercept and include only one of the two dummies. We drop female_no and estimate
 
 $$wage_i = \beta_0 + \beta_1 education_i + \beta_2 experience_i + \beta_3 female\_yes_i + u_i .$$
+The category whose dummy is left out is the reference group. Here that is men (female = no). For men 
+$female\_yes_i = 0$, so their regression line is $\beta_0 + \beta_1 education_i + \beta_2 experience_i$. For women it is $(\beta_0 + \beta_3) + \beta_1 education_i + \beta_2 experience_i$. The two lines have the same slopes and differ only in the intercept, by $\beta_3$. If we let R make the dummy itself with female, R also uses no as the reference category (it comes first alphabetically) and we get exactly the same estimates.
 
-The reference group is the category that is left out: men (`female = no`). R makes the same choice when we use `female` directly, and the estimates are identical. The estimated model, with HC1 standard errors in parentheses, is
+The estimated coefficient on female_yes is −3.239. This means that, for a man and a woman with the same years of education and the same years of experience, the woman's hourly wage is on average about $3.24 lower than the man's. With the HC1 robust standard error of 0.6082 the t-statistic is −5.33, so the coefficient is statistically significant at the 5% level.
 
-$$\widehat{wage}_i = \underset{(2.108)}{-4.256} + \underset{(0.146)}{0.938}\, education_i + \underset{(0.027)}{0.138}\, experience_i - \underset{(0.608)}{3.239}\, female\_yes_i .$$
-
-$\hat\beta_3 = -3.24$: holding education and experience constant, women earn on average \$3.24 per hour less than men. With $t = -5.33$ and a 95% robust confidence interval of $[-4.44, -2.04]$, this difference is significant at the 5% level. It is a conditional difference, not necessarily a causal effect: other factors that differ by gender, such as occupation or hours worked, are still in the error term.
+This is a conditional difference in average wages between women and men, not proof that being female causes a lower wage. Other factors that differ between men and women and affect wages, such as occupation, sector or hours worked, are still in the error term.
 
 ------------------------------------------------------------------------
 
@@ -361,43 +361,121 @@ $$wage_i = \beta_0 + \beta_1 education_i + \beta_2 experience_i + \beta_3 female
 
 where the categorical variables enter as dummies. We include a control if it affects wages and is related to education, because leaving it out would then cause omitted variable bias (see 3(a)).
 
-- **experience**: raises wages, and is negatively related to education because people who study longer start working later.
-- **female**: women earn \$3.24 per hour less than men with the same education and experience (3(d)). It captures gender differences in pay and career patterns.
-- **union**: unions bargain for higher wages (\$12.35 against \$8.66 in our sample). Union members have only slightly more education (13.7 against 13.3 years), so omitting it would cause little bias, but it is an important wage determinant.
-- **region** (extra): the South has lower wages (\$8.29 against \$9.62) and less education (12.9 against 13.6 years). It captures local labour markets and cost of living.
-- **ethnicity** (extra): Hispanic workers have less education (12.6 against 13.4 years) and lower wages (\$8.27 against \$9.27) than Caucasian workers. It captures for example discrimination or language skills. There are only 10 Hispanic workers, so this coefficient will be imprecise.
+- experience: raises wages, and is negatively related to education because people who study longer start working later.
+- female: women earn $3.24 per hour less than men with the same education and experience (3(d)). It captures gender differences in pay and career patterns.
+- union: unions bargain for higher wages ($12.35 against $8.66 in our sample). Union members have only slightly more education (13.7 against 13.3 years), so omitting it would cause little bias, but it is an important wage determinant.
+- region (extra): the South has lower wages ($8.29 against $9.62) and less education (12.9 against 13.6 years). It captures local labour markets and cost of living.
+- ethnicity (extra): Hispanic workers have less education (12.6 against 13.4 years) and lower wages ($8.27 against $9.27) than Caucasian workers. It captures for example discrimination or language skills. There are only 10 Hispanic workers, so this coefficient will be imprecise.
 
 We leave out:
 
-- **age**: $age_i = experience_i + education_i + 6$, so adding it gives perfect multicollinearity, as in 3(c). R returns `NA`.
-- **occupation** and **sector**: these are partly a result of education, so controlling for them would remove part of the education effect ("bad controls"). We use them as a sensitivity check in 4(b).
-- **married**: the direction of causality with wages is unclear and it is not clearly related to education.
+- age: $age_i = experience_i + education_i + 6$, so adding it gives perfect multicollinearity, as in 3(c). R returns NA.
+- occupation and sector: these are partly a result of education, so controlling for them would remove part of the education effect ("bad controls"). We use them as a sensitivity check in 4(b).
+- married: the direction of causality with wages is unclear and it is not clearly related to education.
 
-An important unobserved determinant of wages is **ability**. More able people get more education and earn more anyway, so ability stays in the error term and is correlated with education. Family background and school quality are other examples. Therefore even the base model probably does not give the causal effect of education.
+An important unobserved determinant of wages is ability. More able people get more education and earn more anyway, so ability stays in the error term and is correlated with education. Family background and school quality are other examples. Therefore even the base model probably does not give the causal effect of education.
 
 ## (b) (2 pt)
 
-Write your group answer here.
-
 ```{r q4b}
-# R code for Question 4(b)
+# R Base model with HC1 robust standard errors
+ct_base <- coeftest(base_model, vcov = vcovHC(base_model, type = "HC1"))
+ct_base
+
+b_educ <- ct_base["education", "Estimate"]
+se_educ <- ct_base["education", "Std. Error"]
+t_base <- qt(0.975, df = base_model$df.residual)
+
+# coefficient on education, robust standard error and the 95% confidence interval
+report_base <- c(Coefficient = b_educ,
+                 Robust_SE   = se_educ,
+                 CI_lower    = b_educ - t_base * se_educ,
+                 CI_upper    = b_educ + t_base * se_educ)
+round(report_base, 4)
+
+# degrees of freedom of the base model
+base_model$df.residual
+
+# education coefficient across the different specifications
+educ_comparison <- c("Q1: simple regression" = unname(coef(model)["education"]),
+                     "Q3(a): + experience" = unname(coef(model_exp)["education"]),
+                     "Q3(d): + experience + female" = unname(coef(model_fem)["education"]),
+                     "Q4: base model" = b_educ)
+round(educ_comparison, 4)
+
+# an alternative model; base model + occupation + sector
+alt_model <- lm(wage ~ education + experience + female + union + region + ethnicity +
+                  occupation + sector, data = CPS1985)
+ct_alt <- coeftest(alt_model, vcov = vcovHC(alt_model, type = "HC1"))
+ct_alt
+
+b_alt  <- ct_alt["education", "Estimate"]
+se_alt <- ct_alt["education", "Std. Error"]
+t_alt  <- qt(0.975, df = alt_model$df.residual)
+
+report_alt <- c(Coefficient = b_alt,
+                Robust_SE   = se_alt,
+                CI_lower    = b_alt - t_alt * se_alt,
+                CI_upper    = b_alt + t_alt * se_alt)
+round(report_alt, 4)
+
+# the sensitivity check
+round(c(base = b_educ, alternative = b_alt, difference = b_alt - b_educ), 4)
 ```
+The coefficient on education in the base model is 0.8939. Holding experience, sex, union membership, region and ethnicity constant, one additional year of education is associated with around \$0.89 higher hourly wage. The HC1 robust standard error is 0.1512. A 95% confidence interval is constructed as \[\hat{\beta}_1 \pm t_{0.975,173}\,SE(\hat{\beta}_1) = [0.5955,\ 1.1923].\] As zero is not contained in this interval, the association is statistically significant at the 5% level.
+
+Compared with the earlier estimates (0.7265 in Q1, 0.9311 in Q3(a) and 0.9377 in Q3(d)), the coefficient in the base model is reasonably stable. The biggest change occurs between Q1 and Q3(a), when experience was added. This is in line with the omitted variable bias we discussed in Q3(a): experience affects wages and is correlated with education, so omitting experience lowered the education coefficient. After that, the coefficient stays close to 0.9. The base model coefficient differs by only 0.0372 from Q3(a) and 0.0438 from Q3(d). This is relatively small compared to the robust standard error of 0.1512.
+
+This shows that the estimated association between education and wages does not depend strongly on the demographic controls we add (female, union, region and ethnicity), as long as experience is included. The estimate stays between around 0.89 and 0.94 in the base model and in Q3. However, it does change when occupation and sector are added (see below). This does not prove that the effect of education on wages is causal. Control variables only work if conditional mean independence holds, and we cannot check this with the data we have. There are also factors that we do not observe, such as ability. These are still in the error term and are probably correlated with education (see Q4(a)). The coefficients on the control variables do not need a causal interpretation either.
+
+As a sensitivity check, we added occupation and sector to the base model. This is a plausible alternative, as these variables can control for omitted factors that affect wages and are related to education, for example the type of job a person has. In Q4(a) we explained that these variables are partly a result of education, so a part of the education effect may run through them. The coefficient on education in the alternative model is 0.5866, with a robust standard error of 0.1796 and a 95% confidence interval of [0.2321, 0.9412]. Compared to the base model (0.8939), the coefficient changes by -0.3073. This is large relative to the robust standard error of 0.1512: roughly 2 standard errors, or about a third of the base model estimate. The coefficient remains positive and statistically significant, as zero is not contained in the confidence interval. So the sign and significance of the education effect are not sensitive to the choice of controls, but its size is.
+
 
 ## (c) (2 pt)
 
-Write your group answer here.
-
 ```{r q4c}
-# R code for Question 4(c)
+library(car)
+
+# orderof the coefficients in the base model
+names(coef(base_model))
+
+# joint null hypothesis: the coefficients on female and union are both zero (q = 2)
+R <- rbind(c(0, 0, 0, 1, 0, 0, 0, 0),
+           c(0, 0, 0, 0, 1, 0, 0, 0))
+r <- c(0, 0)
+
+# HC1 robust, large-sample Chi-squared test
+linearHypothesis(base_model, R, r, test = "Chisq", white.adjust = "hc1")
+
+# the two corresponding individual (HC1 robust) tests from the base model
+ct_base[c("femaleyes", "unionyes"), ]
+
 ```
+We test the joint null hypothesis that the coefficients associated with female and union are both zero:
+
+\[H_0: \beta_{female} = 0 \text{ and } \beta_{union} = 0 \qquad \text{against} \qquad H_1: \beta_{female} \neq 0 \text{ or } \beta_{union} \neq 0 \text{ (or both)}.\]
+
+This is a joint hypothesis with $q = 2$ restrictions, which we write as $R\beta = r$. The matrix $R$ has a 1 in the column of female and in the column of union, zeros everywhere else, and $r = (0, 0)'$. We use `linearHypothesis()` with an HC1 heteroskedasticity-robust covariance matrix and the large-sample Chi-squared test. The test statistic is 35.505 and the p-value is $1.951 \times 10^{-8}$. The 5% critical value of the $\chi^2_2$ distribution is 5.99. Because the test statistic is larger than 5.99 and the p-value is lower than 0.05, we reject the null hypothesis at the 5% level. So female and union are jointly significant determinants of wages in the base model.
+
+The corresponding individual robust t-tests give $t = -4.5937$ (p-value $8.36 \times 10^{-6}$) for female and $t = 2.4671$ (p-value 0.0146) for union. Both these coefficients are individually significant at the 5% level, so the individual tests lead to the same conclusion as the joint test.
+
+However, performing two separate 5% tests is not equivalent to the joint test at the 5% level. If we reject the null hypothesis when $|t_1| > 1.96$ and/or $|t_2| > 1.96$, the probability of rejecting a true null hypothesis is larger than 5%. If the two estimators were independent, it would be $1 - 0.95^2 = 0.0975$. So, the Type I error increases to almost 10%. In general, the size of this "one at a time" test also depends on the correlation between $t_1$ and $t_2$, and thus also on the correlation between $\hat{\beta}_{female}$ and $\hat{\beta}_{union}$. The joint test, however, takes this correlation into account, so it has the correct size of 5% in large samples.
 
 ## (d) (2 pt)
 
-Write your group answer here.
-
 ```{r q4d}
-# R code for Question 4(d)
+# the union coefficient in the base model, with HC1 robust standard error
+ct_base["unionyes", ]
+
+# robust 95% confidence interval for the union coefficient
+b_union  <- ct_base["unionyes", "Estimate"]
+se_union <- ct_base["unionyes", "Std. Error"]
+b_union + c(-1, 1) * t_base * se_union
 ```
+
+The coefficient on union is statistically significant at the 5% level (2.53, robust SE 1.03, p = 0.015, 95% CI [0.51, 4.56]). Union members earn about \$2.53 more per hour than non-members with the same education, experience, sex, region and ethnicity.
+
+This does not mean that union membership causes higher wages. Significance only shows an association. Workers are not randomly assigned to union jobs, and unobserved factors such as ability and the industry or firm someone works in can affect both union membership and wages. These factors are in the error term, so the conditional mean-zero assumption probably fails and the coefficient cannot be read as a causal effect.
 
 ------------------------------------------------------------------------
 
@@ -407,32 +485,159 @@ Write your group answer here.
 
 ## (a) (2 pt)
 
-Write your group answer here.
+Although the regression function is nonlinear in experience, the model is still linear in the parameters $\beta_0, \beta_1, \beta_2$ and $\beta_3$. OLS only requires the model to be linear in the unknown coefficients, not in the explanatory variables: $experience^2$ is simply an additional regressor. Therefore the model can be estimated by OLS.
+
+Using the estimated coefficients, the predicted change in hourly wage is
+
+- from 5 to 6 years of experience: $\hat\beta_2 + \hat\beta_3(6^2 - 5^2) = 0.268$, so about \$0.27 per hour;
+- from 25 to 26 years of experience: $\hat\beta_2 + \hat\beta_3(26^2 - 25^2) = 0.069$, so about \$0.07 per hour.
+
+The two changes are not equal. Because the function is quadratic, the marginal effect of experience, $\partial wage / \partial experience = \beta_2 + 2\beta_3\, experience$, depends on the level of experience. Since $\hat\beta_3 = -0.0050 < 0$, the returns to experience diminish as experience increases. The coefficient on $experience^2$ is statistically significant at the 5% level with HC1 robust standard errors ($p \approx 0.024$), so the data support this curvature.
+
+The turning point is $experience^* = -\hat\beta_2 / (2\hat\beta_3) = 32.4$ years. The observed experience ranges from 0 to 55 years, so the turning point lies within the sample. Wages increase with experience up to around 32 years and then slowly decrease. This shape is economically plausible: workers gain most skills early in their career, while at advanced career stages the returns diminish and may even become negative, for example because skills become outdated. Note that only 24 of the 181 workers have more than 32 years of experience, so the declining part of the curve is estimated from relatively few observations.
 
 ```{r q5a}
 # R code for Question 5(a)
+
+CPS1985$experience_sq <- CPS1985$experience^2
+
+model_quad <- lm(wage ~ education + experience + experience_sq,data = CPS1985)
+
+summary(model_quad)
+coeftest(model_quad, vcov = vcovHC(model_quad, type = "HC1"))
+
+# calculate change in hourly wage for change in experience
+
+b <- coef(model_quad)
+
+change_5_6 <-b["experience"] * (6 - 5) +b["experience_sq"] * (6^2 - 5^2)
+
+change_25_26 <-b["experience"] * (26 - 25) + b["experience_sq"] * (26^2 - 25^2)
+
+print(change_5_6)
+print(change_25_26)
+
+# turning point (set first derivative of function w.r.t experience =0)
+# this gives us b2 + 2*b3*x = 0 <--> x = -b2/(2*b3)
+
+b2 <- coef(model_quad)["experience"]
+b3 <- coef(model_quad)["experience_sq"]
+
+turning_point <- -b2 / (2 * b3)
+
+print(turning_point)
+
+range(CPS1985$experience)
+sum(CPS1985$experience > turning_point)
+
 ```
 
 ## (b) (2 pt)
 
-Write your group answer here.
+The quadratic specification appears to provide a plausible description of the experience-wage relationship within the observed range. The graph shows that wages increase with experience, but the slope becomes smaller as experience accumulates. This is consistent with the calculations from part (a), where one extra year of experience raises the wage by \$0.27 per hour at 5 years but only by \$0.07 per hour at 25 years, and the slope is zero at the turning point of 32.4 years. The model captures diminishing returns to experience, which is economically reasonable because workers gain valuable skills early in their careers while additional experience becomes less valuable later on.
+
+We would not trust the polynomial for predictions far outside the observed experience range. Because $\hat\beta_3 < 0$, the fitted curve keeps falling after the turning point and, at the mean level of education, becomes negative at about 79.6 years of experience, far above the sample maximum of 55 years. A negative wage is not economically meaningful. The model may provide a reasonable approximation within the observed range, but this does not guarantee that the relationship follows the same pattern outside it.
 
 ```{r q5b}
 # R code for Question 5(b)
+
+# plot the function with constant education
+
+b0 <- coef(model_quad)["(Intercept)"]
+b1 <- coef(model_quad)["education"]
+b2 <- coef(model_quad)["experience"]
+b3 <- coef(model_quad)["experience_sq"]
+
+mean_edu <- mean(CPS1985$education)
+
+curve( b0 + b1 * mean_edu + b2 * x + b3 * x^2, from = min(CPS1985$experience), to = max(CPS1985$experience),
+  xlab = "Experience",
+  ylab = "Predicted wage",
+  main = "Quadratic wage-experience profile",
+  lwd = 2
+)
+
+# experience at which the fitted wage (at mean education) becomes zero
+c0 <- b0 + b1 * mean_edu
+(-b2 - sqrt(b2^2 - 4 * b3 * c0)) / (2 * b3)
 ```
 
 ## (c) (2 pt)
 
-Write your group answer here.
+Holding experience constant, one additional year of education is associated with approximately $100 \times 0.0894 = 8.94\%$ higher hourly wages. This is the approximation that holds for small changes; the exact effect is $100 \times (e^{0.0894} - 1) = 9.35\%$.
+
+In the level-wage models, one additional year of education is associated with about \$0.59 to \$0.94 higher hourly wages: 0.73 in Q1, 0.93 to 0.94 in Q3, 0.89 in the Q4 base model, 0.59 in the Q4 alternative model and 0.86 in the quadratic model of Q5(a). The log specification measures relative (percentage) changes in wages, while the level models measure absolute changes in dollars per hour. At the mean wage of \$9.25, a 9% increase is roughly \$0.83 to \$0.86, so the two interpretations are of a similar size.
+
+The $R^2$ of the level quadratic model is 0.212 and the $R^2$ of the log-wage model is 0.203. These cannot be compared directly. The $R^2$ of the log model measures the share of the variation in log(wage) that is explained, whereas the $R^2$ of the level model measures the share of the variation in wage itself. The two dependent variables have a different total variation, so a larger $R^2$ does not mean that one specification is better than the other.
 
 ```{r q5c}
 # R code for Question 5(c)
+
+model_log <- lm(
+  log(wage) ~ education + experience + experience_sq,
+  data = CPS1985
+)
+
+summary(model_log)
+coeftest(model_log, vcov = vcovHC(model_log, type = "HC1"))
+
+# approximate and exact percentage effect of one extra year of education
+b_educ_log <- coef(model_log)["education"]
+c(approximate = 100 * b_educ_log, exact = 100 * (exp(b_educ_log) - 1))
+
+# R-squared of the level and the log model
+c(level_quadratic = summary(model_quad)$r.squared, log = summary(model_log)$r.squared)
 ```
 
 ## (d) (2 pt)
 
-Write your group answer here.
+R uses female = no (men) as the reference category. The fitted regression functions are
+
+For female = no:
+
+$$\widehat{\log(wage)}_i = 0.8903 + 0.0693\, education_i + 0.0381\, experience_i - 0.000552\, experience_i^2$$
+
+For female = yes:
+
+$$\widehat{\log(wage)}_i = (0.8903 - 0.9533) + (0.0693 + 0.0462)\, education_i + 0.0381\, experience_i - 0.000552\, experience_i^2$$
+
+$$\widehat{\log(wage)}_i = -0.0631 + 0.1155\, education_i + 0.0381\, experience_i - 0.000552\, experience_i^2$$
+
+The estimated return to education is about 6.9% per year for men and about 11.5% per year for women (using the approximation $100 \times \hat\beta$; the exact effects are 7.2% and 12.2%).
+
+We test the joint null hypothesis that both the intercept and the education slope are the same for the two groups:
+
+$$H_0: \beta_{female} = 0 \text{ and } \beta_{education \times female} = 0.$$
+
+The HC1 heteroskedasticity-robust joint test gives $\chi^2 = 29.12$ with a p-value of $4.75 \times 10^{-7}$. Since the p-value is below 0.05, we reject the null hypothesis: the two fitted regression lines are statistically distinguishable at the 5% level.
+
+The joint test only tells us that the two lines differ in the intercept, in the slope, or in both. It does not show that the return to education differs between men and women. With HC1 standard errors, the intercept difference (female) is individually significant ($p = 0.008$), but the interaction is not significant at the 5% level ($p = 0.082$). So the evidence for a different slope on its own is weak.
+
+Economically, the difference can be meaningful. The estimated return to education is 4.6 percentage points higher for women, which is large, but it is estimated imprecisely. The gender gap in wages depends on education: at 12 years of education women earn about 33% less than men with the same experience, at 16 years about 19% less, and at 18 years about 12% less. The intercept difference of −0.95 itself refers to zero years of education, which is outside the data (the lowest education among women is 6 years), so it should not be interpreted on its own.
 
 ```{r q5d}
 # R code for Question 5(d)
+
+model_interact <- lm(log(wage) ~ education * female + experience + experience_sq, data = CPS1985)
+
+summary(model_interact)
+
+# test
+
+# individual tests with HC1 robust standard errors
+coeftest(model_interact, vcov = vcovHC(model_interact, type = "HC1"))
+
+linearHypothesis(model_interact,c("femaleyes = 0","education:femaleyes = 0"),vcov. = vcovHC(model_interact, type ="HC1"),test="Chisq")
+
+# estimated return to education per group (approximate and exact, in %)
+ci <- coef(model_interact)
+returns <- c(men = unname(ci["education"]),
+             women = unname(ci["education"] + ci["education:femaleyes"]))
+round(rbind(approximate = 100 * returns, exact = 100 * (exp(returns) - 1)), 1)
+
+# gender wage gap (in %) at 12, 16 and 18 years of education
+gap_log <- ci["femaleyes"] + ci["education:femaleyes"] * c(12, 16, 18)
+round(100 * (exp(gap_log) - 1), 1)
+
+range(CPS1985$education[CPS1985$female == "yes"])
 ```
