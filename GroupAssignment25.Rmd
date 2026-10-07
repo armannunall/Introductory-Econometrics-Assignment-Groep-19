@@ -44,8 +44,12 @@ We start by loading the data set alongside packaged that we need.
 library(readxl)
 library(sandwich)
 library(lmtest)
+library(car)
 
 CPS1985 <- read_excel("CPS1985.xlsx")
+
+# squared experience, used in Question 5
+CPS1985$experience_sq <- CPS1985$experience^2
 ```
 
 # Question 1
@@ -434,9 +438,7 @@ As a sensitivity check, we added occupation and sector to the base model. This i
 ## (c) (2 pt)
 
 ```{r q4c}
-library(car)
-
-# orderof the coefficients in the base model
+# order of the coefficients in the base model
 names(coef(base_model))
 
 # joint null hypothesis: the coefficients on female and union are both zero (q = 2)
@@ -498,8 +500,6 @@ The turning point is $experience^* = -\hat\beta_2 / (2\hat\beta_3) = 32.4$ years
 
 ```{r q5a}
 # R code for Question 5(a)
-
-CPS1985$experience_sq <- CPS1985$experience^2
 
 model_quad <- lm(wage ~ education + experience + experience_sq,data = CPS1985)
 

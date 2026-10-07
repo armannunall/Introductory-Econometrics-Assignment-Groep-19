@@ -450,8 +450,12 @@ group</strong>.</p>
 <pre class="r"><code>library(readxl)
 library(sandwich)
 library(lmtest)
+library(car)
 
-CPS1985 &lt;- read_excel(&quot;CPS1985.xlsx&quot;)</code></pre>
+CPS1985 &lt;- read_excel(&quot;CPS1985.xlsx&quot;)
+
+# squared experience, used in Question 5
+CPS1985$experience_sq &lt;- CPS1985$experience^2</code></pre>
 </div>
 <div id="question-1" class="section level1">
 <h1>Question 1</h1>
@@ -1178,9 +1182,7 @@ size is.</p>
 </div>
 <div id="c-2-pt-1" class="section level2">
 <h2>(c) (2 pt)</h2>
-<pre class="r"><code>library(car)</code></pre>
-<pre><code>## Loading required package: carData</code></pre>
-<pre class="r"><code># orderof the coefficients in the base model
+<pre class="r"><code># order of the coefficients in the base model
 names(coef(base_model))</code></pre>
 <pre><code>## [1] &quot;(Intercept)&quot;       &quot;education&quot;         &quot;experience&quot;       
 ## [4] &quot;femaleyes&quot;         &quot;unionyes&quot;          &quot;regionsouth&quot;      
@@ -1304,8 +1306,6 @@ skills become outdated. Note that only 24 of the 181 workers have more
 than 32 years of experience, so the declining part of the curve is
 estimated from relatively few observations.</p>
 <pre class="r"><code># R code for Question 5(a)
-
-CPS1985$experience_sq &lt;- CPS1985$experience^2
 
 model_quad &lt;- lm(wage ~ education + experience + experience_sq,data = CPS1985)
 
