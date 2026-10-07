@@ -470,13 +470,16 @@ CPS1985$experience_sq &lt;- CPS1985$experience^2</code></pre>
 with more years of education. At low education levels, wages are
 generally relatively low. There are no top earners among individuals
 with low levels of education. The increase in wage associated with an
-increase in years of education is clear and could reasonably be modeled
-by a straight line up to around 12 years of education.</p>
-<p>After that point, there is substantial variation in wages, as
-individuals with higher levels of education include both relatively high
-and relatively low earners, which is less consistent with a simple
-linear relationship. Despite this variation, the overall pattern seems
-to be approximately linear and upward-sloping.</p>
+increase in years of education is clear, and the average wage rises at a
+roughly constant rate over the whole range of education, so a straight
+line seems a reasonable first summary of the association.</p>
+<p>What changes with education is the spread of wages: above about 12
+years of education there is substantial variation, as individuals with
+higher levels of education include both relatively high and relatively
+low earners. A straight line only describes the average wage at each
+education level, so it does not capture this increasing spread (we come
+back to this in 2(b)). Overall, the pattern seems approximately linear
+and upward-sloping.</p>
 </div>
 <div id="b-1-pt" class="section level2">
 <h2>(b) (1 pt)</h2>
@@ -600,6 +603,17 @@ unrealistically high.</p>
 <pre class="r"><code>summary(CPS1985$education)</code></pre>
 <pre><code>##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
 ##    3.00   12.00   12.00   13.39   16.00   18.00</code></pre>
+<pre class="r"><code># other wage determinants in the data that are related to education
+aggregate(cbind(education, wage) ~ occupation, data = CPS1985, mean)</code></pre>
+<pre><code>##   occupation education      wage
+## 1 management  14.51724 11.294138
+## 2     office  13.64865  7.517838
+## 3      sales  12.72727  7.047273
+## 4   services  12.42308  6.978846
+## 5  technical  16.07143 13.065714
+## 6     worker  11.70000  8.887600</code></pre>
+<pre class="r"><code>cor(CPS1985$education, CPS1985$experience)</code></pre>
+<pre><code>## [1] -0.3737789</code></pre>
 <p>We consider the simple regression model:</p>
 <p><span class="math display">\[
 wage_i = \beta_0 + \beta_1 education_i + u_i
@@ -624,9 +638,17 @@ example, individuals with more education may be more likely to work in
 certain occupations, while occupation can also affect wages. If these
 factors are omitted from the regression and are correlated with
 education, they are included in the error term and the conditional
-exogeneity assumption may be violated. This assumption cannot be
-directly verified from the observed wage and education data, so economic
-reasoning about potential omitted factors is important.</p>
+exogeneity assumption may be violated. The data give some evidence for
+this. Average education and average wage differ strongly by occupation:
+technical workers have on average 16.1 years of education and earn
+$13.07 per hour, while workers in services have 12.4 years and earn
+$6.98. Experience is also clearly related to education (correlation of
+−0.37), because people who study longer start working later. Since
+occupation and experience are not in the simple regression, they are
+part of <span class="math inline">\(u_i\)</span>, so <span class="math inline">\(u_i\)</span> is likely related to education.
+Unobserved factors such as ability cannot be checked with the data at
+all, so economic reasoning about potential omitted factors remains
+important.</p>
 <ol start="2" style="list-style-type: decimal">
 <li><p>i.i.d. observations The second assumption is that <span class="math display">\[
 (X_i,Y_i), \qquad i=1,\ldots,n,
@@ -923,7 +945,8 @@ person is either female or not, so female_yes + female_no = 1 in every
 row. The intercept is also 1 in every row, so female_no is an exact copy
 of “intercept minus female_yes”. That is perfect multicollinearity (the
 dummy variable trap), so OLS can’t pin down that coefficient and R drops
-it. The other estimates are unaffected.</p>
+it. The remaining estimates are exactly the same as in the model with
+only <code>female_yes</code> in 3(d).</p>
 </div>
 <div id="d-2-pt" class="section level2">
 <h2>(d) (2 pt)</h2>
@@ -1489,8 +1512,16 @@ c(level_quadratic = summary(model_quad)$r.squared, log = summary(model_log)$r.sq
 </div>
 <div id="d-2-pt-2" class="section level2">
 <h2>(d) (2 pt)</h2>
-<p>R uses female = no (men) as the reference category. The fitted
-regression functions are</p>
+<p>We estimate</p>
+<p><span class="math display">\[\log(wage_i) = \beta_0 + \beta_1\,
+education_i + \beta_2\, female_i + \beta_3\, (education_i \times
+female_i) + \beta_4\, experience_i + \beta_5\, experience_i^2 + u_i
+,\]</span></p>
+<p>where <span class="math inline">\(female_i = 1\)</span> for women. R
+uses female = no (men) as the reference category, so <span class="math inline">\(\beta_2\)</span> is the difference in intercept
+and <span class="math inline">\(\beta_3\)</span> the difference in the
+education slope between women and men. The fitted regression functions
+are</p>
 <p>For female = no:</p>
 <p><span class="math display">\[\widehat{\log(wage)}_i = 0.8903 +
 0.0693\, education_i + 0.0381\, experience_i - 0.000552\,
@@ -1507,18 +1538,20 @@ about 11.5% per year for women (using the approximation <span class="math inline
 are 7.2% and 12.2%).</p>
 <p>We test the joint null hypothesis that both the intercept and the
 education slope are the same for the two groups:</p>
-<p><span class="math display">\[H_0: \beta_{female} = 0 \text{ and }
-\beta_{education \times female} = 0.\]</span></p>
+<p><span class="math display">\[H_0: \beta_2 = 0 \text{ and } \beta_3 =
+0 \qquad \text{against} \qquad H_1: \beta_2 \neq 0 \text{ or } \beta_3
+\neq 0 \text{ (or both)}.\]</span></p>
 <p>The HC1 heteroskedasticity-robust joint test gives <span class="math inline">\(\chi^2 = 29.12\)</span> with a p-value of <span class="math inline">\(4.75 \times 10^{-7}\)</span>. Since the p-value is
 below 0.05, we reject the null hypothesis: the two fitted regression
 lines are statistically distinguishable at the 5% level.</p>
 <p>The joint test only tells us that the two lines differ in the
 intercept, in the slope, or in both. It does not show that the return to
 education differs between men and women. With HC1 standard errors, the
-intercept difference (female) is individually significant (<span class="math inline">\(p = 0.008\)</span>), but the interaction is not
-significant at the 5% level (<span class="math inline">\(p =
-0.082\)</span>). So the evidence for a different slope on its own is
-weak.</p>
+intercept difference <span class="math inline">\(\hat\beta_2\)</span> is
+individually significant (<span class="math inline">\(p =
+0.008\)</span>), but the interaction <span class="math inline">\(\hat\beta_3\)</span> is not significant at the 5%
+level (<span class="math inline">\(p = 0.082\)</span>). So the evidence
+for a different slope on its own is weak.</p>
 <p>Economically, the difference can be meaningful. The estimated return
 to education is 4.6 percentage points higher for women, which is large,
 but it is estimated imprecisely. The gender gap in wages depends on
